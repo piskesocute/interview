@@ -1,11 +1,7 @@
 <script setup>
 import axios from 'axios';
 import { onMounted, ref } from 'vue';
-// 【GET】https://demo.mercuryfire.com.tw:49110/crudTest/a
-// 【POST】https://demo.mercuryfire.com.tw:49110/crudTest
-// 【PATCH】https://demo.mercuryfire.com.tw:49110/crudTest
-// 【DELETE】https://demo.mercuryfire.com.tw:49110/crudTest/{id}
-
+const filter = ref();
 const blockData = ref([]);
 const tableConfig = ref([
   {
@@ -35,19 +31,18 @@ const tableButtons = ref([
 ]);
 
 const tempData = ref({
-  name: 'test1',
-  age: 199,
+  name: '',
+  age: '',
 });
 
 const getData = () => {
   axios
     .get('https://demo.mercuryfire.com.tw:49110/crudTest/a')
     .then((res) => {
-      console.log(res);
       blockData.value = res.data.result;
     })
     .catch((err) => {
-      console.log(err);
+      console.error(err);
     });
 };
 
@@ -55,32 +50,18 @@ const deleteData = (id) => {
   axios
     .delete(`https://demo.mercuryfire.com.tw:49110/crudTest/${id}`)
     .then((res) => {
-      console.log(res);
       getData();
     })
     .catch((err) => {
-      console.log(err);
+      console.error(err);
     });
 };
 
-const patch = async (data) => {
-  try {
-    const res = await axios.patch(
-      'https://demo.mercuryfire.com.tw:49110/crudTest',
-      data
-    );
-    console.log('patch', res);
-    await getData();
-  } catch (err) {
-    console.log('patch', err);
-  }
-};
 const submitBtnStatus = ref('post');
 const handleClickOption = async (btn, data) => {
   if (btn.status === 'edit') {
     tempData.value = JSON.parse(JSON.stringify(data));
     submitBtnStatus.value = 'patch';
-    console.log('edit', tempData.value);
   } else if (btn.status === 'delete') {
     await deleteData(data.id);
   }
@@ -96,10 +77,10 @@ const handleSubmit = async () => {
           age: tempData.value.age,
         }
       );
-      console.log('submit', res);
+      onResetValidation();
       getData();
     } catch (err) {
-      console.log('submit', err);
+      console.error('submit', err);
     }
   } else if (submitBtnStatus.value === 'patch') {
     try {
@@ -113,13 +94,14 @@ const handleSubmit = async () => {
           createdID: tempData.value.createdID,
         }
       );
-      console.error('patch', res);
       getData();
     } catch (err) {
       console.error('patch', err);
     }
   }
 };
+
+const formRef = ref();
 const onReset = () => {
   tempData.value = {
     name: '',
@@ -128,7 +110,9 @@ const onReset = () => {
   submitBtnStatus.value = 'post';
 };
 
-const filter = ref();
+const onResetValidation = () => {
+  formRef.value.resetValidation();
+};
 
 onMounted(async () => {
   await getData();
@@ -139,9 +123,22 @@ onMounted(async () => {
     <div class="full-width q-px-xl">
       <!-- quaser form -->
       <div class="q-mb-xl">
-        <q-form @submit.prevent="handleSubmit" @reset="onReset">
-          <q-input v-model="tempData.name" label="姓名" />
-          <q-input v-model.number="tempData.age" label="年齡" />
+        <q-form
+          ref="formRef"
+          @submit.prevent="handleSubmit"
+          @reset="onReset"
+          @resetValidation="onResetValidation"
+        >
+          <q-input
+            v-model="tempData.name"
+            label="姓名"
+            :rules="[(val) => val.length > 0 || '請輸入姓名']"
+          />
+          <q-input
+            v-model.number.trip="tempData.age"
+            label="年齡"
+            :rules="[(val) => val > 0 || '請輸入年齡']"
+          />
           <q-btn
             color="primary"
             class="q-mt-md"
